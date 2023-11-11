@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7111983652590392671
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5090781738246012040}
+  - component: {fileID: 1563165141376436699}
+  m_Layer: 0
+  m_Name: UniVoiceAgent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5090781738246012040
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7111983652590392671}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1563165141376436699
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7111983652590392671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e22c3b25d8e76a246b6a18b95e1dd842, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  networkBackend: 0
+  airSignalIpAddress: ws://vps.chriphost.de:12776
+  telepathyPort: 12777
+  roomNameInput: {fileID: 0}
+  hostRoomButton: {fileID: 0}
+  joinRoomButton: {fileID: 0}
+  leaveRoomButton: {fileID: 0}
+  muteSelfButton: {fileID: 0}
+  connectionStatusText: {fileID: 0}
+  networkBackendText: {fileID: 0}
+  peerList: {fileID: 0}
+  chatMode: 0
+  audioClipMic: {fileID: 0}
+  audioSourceId: 0
+  sampleRate: 16000
+  bufferLength: 100

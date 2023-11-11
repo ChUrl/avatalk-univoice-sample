@@ -2,19 +2,16 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-namespace Networking
+namespace Voice
 {
 
     public class PeerListDriver : MonoBehaviour
     {
-        private Dictionary<short, GameObject> peerListEntries = new Dictionary<short, GameObject>();
+        private readonly Dictionary<short, GameObject> peerListEntries = new();
 
         [SerializeField] private GameObject peerListEntryPrefab;
 
-        // GameObject entry = Instantiate<GameObject>(peerListEntryPrefab, transform);
-        // entry.GetComponentInChildren<TMP_Text>().text = "Hello";
-
-        public void addPeer(short id)
+        public void AddPeer(short id)
         {
             if (peerListEntries.ContainsKey(id))
             {
@@ -22,18 +19,18 @@ namespace Networking
                 return;
             }
 
-            GameObject entry = Instantiate<GameObject>(peerListEntryPrefab, transform);
+            GameObject entry = Instantiate(peerListEntryPrefab, transform);
             entry.GetComponentInChildren<TMP_Text>().text = "Peer " + id;
 
             peerListEntries[id] = entry;
         }
 
-        public void addPeers(List<short> peers)
+        public void AddPeers(List<short> peers)
         {
-            peers.ForEach(addPeer);
+            peers.ForEach(AddPeer);
         }
 
-        public void removePeer(short id)
+        public void RemovePeer(short id)
         {
             if (!peerListEntries.ContainsKey(id))
             {
@@ -45,7 +42,7 @@ namespace Networking
             peerListEntries.Remove(id);
         }
 
-        public void clear()
+        public void Clear()
         {
             foreach (GameObject entry in peerListEntries.Values)
             {
