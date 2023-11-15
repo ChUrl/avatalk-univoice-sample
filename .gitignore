@@ -75,3 +75,5 @@ crashlytics-build.properties
 .idea
 Build_Windows
 Build_Android
+Assets/Plugins/QFSW
+Assets/Plugins/QFSW.meta
