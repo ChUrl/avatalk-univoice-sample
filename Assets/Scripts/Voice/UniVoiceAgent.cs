@@ -4,7 +4,9 @@ using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.TelepathyNetwork;
 using System;
 using Adrenak.UniVoice.UniMicInput;
+using Mono.CSharp;
 using TMPro;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,8 +18,14 @@ namespace Voice
     public class UniVoiceAgent : NetworkBehaviour
     {
         private ChatroomAgent agent;
-        private string currentChatroomName;
         private PeerListDriver peerListDriver;
+
+        // TODO: Should these be contained in the UniVoiceAgent?
+        // These synchronize selected values from server to client
+        private NetworkVariable<NetworkBackend> networkBackend = new();
+        private NetworkVariable<FixedString64Bytes> airSignalIpAddress = new();
+        private NetworkVariable<int> telepathyPort = new();
+        private NetworkVariable<FixedString64Bytes> chatRoomName = new();
 
         private NetworkBackend SelectedNetworkBackend => (NetworkBackend)networkBackendDropdown.value;
         private string SelectedAirSignalIpAddress => airSignalAddressInput.text;
@@ -43,6 +51,7 @@ namespace Voice
         [SerializeField] private TMP_InputField airSignalAddressInput;
         [SerializeField] private TMP_InputField telepathyPortInput;
         [SerializeField] private TMP_InputField roomNameInput;
+        [SerializeField] private Button startClientButton;
         [SerializeField] private Button hostRoomButton;
         [SerializeField] private Button joinRoomButton;
         [SerializeField] private Button leaveRoomButton;
@@ -74,21 +83,11 @@ namespace Voice
             UnityEngine.Android.Permission.RequestUserPermission("ACCESS_NETWORK_STATE");
             
             // If we already have an agent, dispose it and create a new one (to allow switching network backends on the fly)
-            if (agent != null)
-            {
-                agent.Dispose();
-                agent = null;
-            }
-
-            // Initialize the PeerList after the agent, but only once
-            if (peerList == null)
-            {
-                InitializePeerList();
-            }
+            if (agent != null) agent.Dispose(); // TODO: No idea if this leaves trash behind
             
-            IChatroomNetwork network = SelectedNetworkBackend == NetworkBackend.AIRPEER
-                ? new UniVoiceAirPeerNetwork("ws://" + SelectedAirSignalIpAddress + ":12776")
-                : UniVoiceTelepathyNetwork.New(SelectedTelepathyPort);
+            IChatroomNetwork network = networkBackend.Value == NetworkBackend.AIRPEER
+                ? new UniVoiceAirPeerNetwork("ws://" + airSignalIpAddress.Value + ":12776")
+                : UniVoiceTelepathyNetwork.New(telepathyPort.Value);
 
             IAudioInput input = chatMode == ChatMode.VOICE
                 ? new UniVoiceUniMicInput(audioSourceId, sampleRate, bufferLength)
@@ -96,13 +95,15 @@ namespace Voice
 
             agent = new ChatroomAgent(network, input, new UniVoiceAudioSourceOutput.Factory());
 
-            // TODO: Probably need to check here if agent creation was successful.
+            // Initialize the PeerList after the agent, but only once
+            if (peerListDriver == null) InitializePeerList();
 
+            // TODO: Probably need to check here if agent creation was successful.
 
             // Hosting events
             agent.Network.OnCreatedChatroom += () =>
             {
-                connectionStatusText.text = "Hosting Chatroom: " + currentChatroomName;
+                connectionStatusText.text = "Hosting Chatroom: " + SelectedRoomName;
                 Debug.Log("Created Chatroom (you are peer " + agent.Network.OwnID + ")!");
             };
 
@@ -161,9 +162,9 @@ namespace Voice
                 // Debug.Log("UniVoiceAgent: Audio received.");
             };
             
-            networkBackendText.text = "Running with " + (SelectedNetworkBackend == NetworkBackend.TELEPATHY ? "TELEPATHY" : "AIRPEER") + " backend.";
-            connectionStatusText.text = "Disconnected";
+            networkBackendText.text = "Running with " + (networkBackend.Value == NetworkBackend.TELEPATHY ? "TELEPATHY" : "AIRPEER") + " backend.";
 
+            // Start unmuted
             agent.MuteOthers = false;
             agent.MuteSelf = false;
         }
@@ -175,6 +176,7 @@ namespace Voice
             joinRoomButton.onClick.AddListener(JoinChatroom);
             leaveRoomButton.onClick.AddListener(LeaveChatroom);
             muteSelfButton.onClick.AddListener(ToggleMuteSelf);
+            startClientButton.onClick.AddListener(() => { NetworkManager.Singleton.StartClient(); });
         }
 
         private void InitializePeerList()
@@ -193,7 +195,7 @@ namespace Voice
             // Joining events
             agent.Network.OnJoinedChatroom += (short id) =>
             {
-                peerListDriver.AddPeer(agent.Network.OwnID);
+                peerListDriver.AddPeer(agent.Network.OwnID); // This is required
                 peerListDriver.AddPeers(agent.Network.PeerIDs);
             };
             agent.Network.OnLeftChatroom += () => { peerListDriver.Clear(); };
@@ -203,6 +205,7 @@ namespace Voice
             agent.Network.OnPeerLeftChatroom += (short id) => { peerListDriver.RemovePeer(id); };
         }
 
+        // TODO: Handle UI components' enabled-/disabled-state differently, maybe via some UIState class?
         private void SelectNetworkBackend(int item)
         {
             switch ((NetworkBackend)item)
@@ -227,34 +230,75 @@ namespace Voice
 
         private void HostChatroom()
         {
+            // Start the Unity networking to synchronize NetworkVariables
+            NetworkManager.Singleton.StartServer();
+
+            // Save selected network settings to NetworkVariables
+            networkBackend.Value = SelectedNetworkBackend;
+            chatRoomName.Value = SelectedRoomName;
+            if (SelectedNetworkBackend == NetworkBackend.AIRPEER)
+            {
+                airSignalIpAddress.Value = SelectedAirSignalIpAddress;
+            }
+            else
+            {
+                telepathyPort.Value = SelectedTelepathyPort;
+            }
+            
             // Initialize the agent each time since the network backend might have been changed
             InitializeAgent();
             
             // "localhost" is TELEPATHY's default IP, reflect that
-            currentChatroomName = (SelectedNetworkBackend == NetworkBackend.TELEPATHY && SelectedRoomName == "")
-                ? "localhost"
-                : SelectedRoomName;
+            if (SelectedNetworkBackend == NetworkBackend.TELEPATHY && SelectedRoomName == "")
+            {
+                roomNameInput.text = "localhost";
+            }
 
-            agent.Network.HostChatroom(currentChatroomName);
+            agent.Network.HostChatroom(SelectedRoomName);
         }
 
         private void JoinChatroom()
         {
+            // Start the Unity networking to synchronize NetworkVariables
+            NetworkManager.Singleton.StartClient();
+            
+            // TODO: The client has to wait until the connection is established before reading the NetworkVariables
+
+            // Load network settings from NetworkVariables
+            networkBackendDropdown.value = (int)networkBackend.Value;
+            roomNameInput.text = chatRoomName.Value.ToString();
+            if (SelectedNetworkBackend == NetworkBackend.AIRPEER)
+            {
+                airSignalAddressInput.text = airSignalIpAddress.Value.ToString();
+            }
+            else
+            {
+                telepathyPortInput.text = telepathyPort.Value.ToString();
+            }
+            
             // Initialize the agent each time since the network backend might have been changed
             InitializeAgent();
             
             // "localhost" is TELEPATHY's default IP, reflect that
-            currentChatroomName = (SelectedNetworkBackend == NetworkBackend.TELEPATHY && SelectedRoomName == "")
-                ? "localhost"
-                : SelectedRoomName;
+            if (SelectedNetworkBackend == NetworkBackend.TELEPATHY && SelectedRoomName == "")
+            {
+                roomNameInput.text = "localhost";
+            }
 
-            agent.Network.JoinChatroom(currentChatroomName);
+            agent.Network.JoinChatroom(SelectedRoomName);
+
+            // Mute the client's microphone in radio mode, to not blast the clip multiple times
+            if (chatMode == ChatMode.RADIO)
+            {
+                ToggleMuteSelf();
+            }
         }
 
         private void LeaveChatroom()
         {
-            currentChatroomName = "";
-
+            // Disconnect from Unity networking
+            NetworkManager.Singleton.Shutdown();
+            
             if (agent.CurrentMode == ChatroomAgentMode.Host)
             {
                 agent.Network.CloseChatroom();
@@ -269,6 +313,12 @@ namespace Voice
 
         private void ToggleMuteSelf()
         {
+            if (agent == null)
+            {
+                Debug.Log("Can't toggle mute: Agent not initialized.");
+                return;
+            }
+            
             if (!agent.MuteSelf) //if should mute self
             {
                 Debug.Log("Muted Self.");
@@ -287,6 +337,23 @@ namespace Voice
         private void Start()
         {
             InitializeInput();
+
+            networkBackend.OnValueChanged += (value, newValue) =>
+            {
+                Debug.Log("value: " + value + " newValue: " + newValue);
+            };
+            airSignalIpAddress.OnValueChanged += (value, newValue) =>
+            {
+                Debug.Log("value: " + value + " newValue: " + newValue);
+            };
+            telepathyPort.OnValueChanged += (value, newValue) =>
+            {
+                Debug.Log("value: " + value + " newValue: " + newValue);
+            };
+            chatRoomName.OnValueChanged += (value, newValue) =>
+            {
+                Debug.Log("value: " + value + " newValue: " + newValue);
+            };
         }
     }
 
