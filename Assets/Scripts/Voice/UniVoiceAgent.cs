@@ -212,16 +212,16 @@ namespace Voice
             {
                 case NetworkBackend.AIRPEER:
                 {
-                    airSignalAddressInput.readOnly = false;
-                    telepathyPortInput.readOnly = true;
+                    airSignalAddressInput.image.enabled = true;
+                    telepathyPortInput.image.enabled = false;
                     roomNameInput.placeholder.GetComponent<TMP_Text>().text = "ChatRoom Name";
                     break;
                 }
 
                 case NetworkBackend.TELEPATHY:
                 {
-                    airSignalAddressInput.readOnly = true;
-                    telepathyPortInput.readOnly = false;
+                    airSignalAddressInput.image.enabled = false;
+                    telepathyPortInput.image.enabled = true;
                     roomNameInput.placeholder.GetComponent<TMP_Text>().text = "ChatRoom IP Address";
                     break;
                 }
@@ -287,7 +287,7 @@ namespace Voice
 
             agent.Network.JoinChatroom(SelectedRoomName);
 
-            // Mute the client's microphone in radio mode, to not blast the clip multiple times
+            // Mute each client's microphone in radio mode, to not blast the clip multiple times
             if (chatMode == ChatMode.RADIO)
             {
                 ToggleMuteSelf();
