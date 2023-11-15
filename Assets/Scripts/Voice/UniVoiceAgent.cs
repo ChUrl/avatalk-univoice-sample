@@ -5,6 +5,7 @@ using Adrenak.UniVoice.TelepathyNetwork;
 using System;
 using Adrenak.UniVoice.UniMicInput;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using Voice.Radio;
@@ -12,12 +13,16 @@ using Voice.Radio;
 namespace Voice
 {
 
-    public class UniVoiceAgent : MonoBehaviour
+    public class UniVoiceAgent : NetworkBehaviour
     {
         private ChatroomAgent agent;
         private string currentChatroomName;
         private PeerListDriver peerListDriver;
 
+        private NetworkBackend SelectedNetworkBackend => (NetworkBackend)networkBackendDropdown.value;
+        private string SelectedAirSignalIpAddress => airSignalAddressInput.text;
+        private int SelectedTelepathyPort => Int32.Parse(telepathyPortInput.text);
+        private string SelectedRoomName => roomNameInput.text;
 
         private enum NetworkBackend
         {
@@ -31,20 +36,12 @@ namespace Voice
             RADIO
         }
 
-        [Header("Network")]
-
-        [Tooltip("AirPeer uses WebRTC based peer-to-peer networking (RTP-UDP), which requires an external signaling server (AirSignal) for connection establishment. Telepathy uses message-based client-host networking (TCP).")]
-        [SerializeField] private NetworkBackend networkBackend = NetworkBackend.TELEPATHY;
-
-        [Tooltip("The AirSignal signaling server's public websocket address, required only for Network Backend: AIRPEER.")]
-        [SerializeField] private string airSignalIpAddress = "ws://vps.chriphost.de:12776";
-
-        [Tooltip("The Telepathy port, required only for Network Backend: TELEPATHY.")]
-        [SerializeField] private int telepathyPort = 12777;
-
 
         [Header("UI")]
-
+        
+        [SerializeField] private TMP_Dropdown networkBackendDropdown;
+        [SerializeField] private TMP_InputField airSignalAddressInput;
+        [SerializeField] private TMP_InputField telepathyPortInput;
         [SerializeField] private TMP_InputField roomNameInput;
         [SerializeField] private Button hostRoomButton;
         [SerializeField] private Button joinRoomButton;
@@ -66,19 +63,32 @@ namespace Voice
         [Tooltip("Frequency used by the microphone to time-quantize the analog signal. This is important for sound quality.")]
         [SerializeField] private int sampleRate = 16000;
 
-        [Tooltip("Length of the internal sample buffer. A packet containing voice-data is sent only after a full sample buffer can be read, so this is important for latency.")]
+        [Tooltip("Length of the internal sample buffer. A packet containing voice-data is sent only after a full sample buffer can be read. This is important for latency.")]
         [SerializeField] private int bufferLength = 100;
 
-        private void InitializeServer()
+        private void InitializeAgent()
         {
             // Don't know if this is required, Unity should request required permissions automatically....
             UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.Microphone);
             UnityEngine.Android.Permission.RequestUserPermission("INTERNET");
             UnityEngine.Android.Permission.RequestUserPermission("ACCESS_NETWORK_STATE");
+            
+            // If we already have an agent, dispose it and create a new one (to allow switching network backends on the fly)
+            if (agent != null)
+            {
+                agent.Dispose();
+                agent = null;
+            }
 
-            IChatroomNetwork network = networkBackend == NetworkBackend.AIRPEER
-                ? new UniVoiceAirPeerNetwork(airSignalIpAddress)
-                : UniVoiceTelepathyNetwork.New(telepathyPort);
+            // Initialize the PeerList after the agent, but only once
+            if (peerList == null)
+            {
+                InitializePeerList();
+            }
+            
+            IChatroomNetwork network = SelectedNetworkBackend == NetworkBackend.AIRPEER
+                ? new UniVoiceAirPeerNetwork("ws://" + airSignalAddressInput.text + ":12776")
+                : UniVoiceTelepathyNetwork.New(SelectedTelepathyPort);
 
             IAudioInput input = chatMode == ChatMode.VOICE
                 ? new UniVoiceUniMicInput(audioSourceId, sampleRate, bufferLength)
@@ -150,10 +160,17 @@ namespace Voice
             {
                 // Debug.Log("UniVoiceAgent: Audio received.");
             };
+            
+            networkBackendText.text = "Running with " + (SelectedNetworkBackend == NetworkBackend.TELEPATHY ? "TELEPATHY" : "AIRPEER") + " backend.";
+            connectionStatusText.text = "Disconnected";
+
+            agent.MuteOthers = false;
+            agent.MuteSelf = false;
         }
 
         private void InitializeInput()
         {
+            networkBackendDropdown.onValueChanged.AddListener(SelectNetworkBackend);
             hostRoomButton.onClick.AddListener(HostChatroom);
             joinRoomButton.onClick.AddListener(JoinChatroom);
             leaveRoomButton.onClick.AddListener(LeaveChatroom);
@@ -186,32 +203,50 @@ namespace Voice
             agent.Network.OnPeerLeftChatroom += (short id) => { peerListDriver.RemovePeer(id); };
         }
 
+        private void SelectNetworkBackend(int item)
+        {
+            switch ((NetworkBackend)item)
+            {
+                case NetworkBackend.AIRPEER:
+                {
+                    airSignalAddressInput.readOnly = false;
+                    telepathyPortInput.readOnly = true;
+                    roomNameInput.placeholder.GetComponent<TMP_Text>().text = "ChatRoom Name";
+                    break;
+                }
+
+                case NetworkBackend.TELEPATHY:
+                {
+                    airSignalAddressInput.readOnly = true;
+                    telepathyPortInput.readOnly = false;
+                    roomNameInput.placeholder.GetComponent<TMP_Text>().text = "ChatRoom IP Address";
+                    break;
+                }
+            }
+        }
+
         private void HostChatroom()
         {
+            // Initialize the agent each time since the network backend might have been changed
+            InitializeAgent();
+            
             // "localhost" is TELEPATHY's default IP, reflect that
-            if (networkBackend == NetworkBackend.TELEPATHY && roomNameInput.text == "")
-            {
-                currentChatroomName = "localhost";
-            }
-            else
-            {
-                currentChatroomName = roomNameInput.text;
-            }
+            currentChatroomName = (SelectedNetworkBackend == NetworkBackend.TELEPATHY && SelectedRoomName == "")
+                ? "localhost"
+                : SelectedRoomName;
 
             agent.Network.HostChatroom(currentChatroomName);
         }
 
         private void JoinChatroom()
         {
+            // Initialize the agent each time since the network backend might have been changed
+            InitializeAgent();
+            
             // "localhost" is TELEPATHY's default IP, reflect that
-            if (networkBackend == NetworkBackend.TELEPATHY && roomNameInput.text == "")
-            {
-                currentChatroomName = "localhost";
-            }
-            else
-            {
-                currentChatroomName = roomNameInput.text;
-            }
+            currentChatroomName = (SelectedNetworkBackend == NetworkBackend.TELEPATHY && SelectedRoomName == "")
+                ? "localhost"
+                : SelectedRoomName;
 
             agent.Network.JoinChatroom(currentChatroomName);
         }
@@ -228,6 +263,8 @@ namespace Voice
             {
                 agent.Network.LeaveChatroom();
             }
+
+            networkBackendText.text = "NetworkBackend";
         }
 
         private void ToggleMuteSelf()
@@ -250,14 +287,6 @@ namespace Voice
         private void Start()
         {
             InitializeInput();
-            InitializeServer();
-            InitializePeerList();
-
-            connectionStatusText.text = "Disconnected";
-            networkBackendText.text = "Running with " + (networkBackend == NetworkBackend.TELEPATHY ? "TELEPATHY" : "AIRPEER") + " backend.";
-
-            agent.MuteOthers = false;
-            agent.MuteSelf = false;
         }
     }
 

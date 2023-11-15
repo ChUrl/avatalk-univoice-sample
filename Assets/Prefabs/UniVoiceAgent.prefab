@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5090781738246012040}
   - component: {fileID: 1563165141376436699}
+  - component: {fileID: 3583043629285758408}
   m_Layer: 0
   m_Name: UniVoiceAgent
   m_TagString: Untagged
@@ -44,9 +45,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e22c3b25d8e76a246b6a18b95e1dd842, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkBackend: 0
-  airSignalIpAddress: ws://vps.chriphost.de:12776
-  telepathyPort: 12777
+  networkBackendDropdown: {fileID: 0}
+  airSignalAddressInput: {fileID: 0}
+  telepathyPortInput: {fileID: 0}
   roomNameInput: {fileID: 0}
   hostRoomButton: {fileID: 0}
   joinRoomButton: {fileID: 0}
@@ -55,8 +56,28 @@ MonoBehaviour:
   connectionStatusText: {fileID: 0}
   networkBackendText: {fileID: 0}
   peerList: {fileID: 0}
-  chatMode: 0
+  chatMode: 1
   audioClipMic: {fileID: 0}
   audioSourceId: 0
   sampleRate: 16000
   bufferLength: 100
+--- !u!114 &3583043629285758408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7111983652590392671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 951099334
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
