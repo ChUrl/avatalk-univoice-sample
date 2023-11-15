@@ -21,7 +21,7 @@ namespace Voice
 
         private NetworkBackend SelectedNetworkBackend => (NetworkBackend)networkBackendDropdown.value;
         private string SelectedAirSignalIpAddress => airSignalAddressInput.text;
-        private int SelectedTelepathyPort => Int32.Parse(telepathyPortInput.text);
+        private int SelectedTelepathyPort => int.Parse(telepathyPortInput.text);
         private string SelectedRoomName => roomNameInput.text;
 
         private enum NetworkBackend
@@ -87,7 +87,7 @@ namespace Voice
             }
             
             IChatroomNetwork network = SelectedNetworkBackend == NetworkBackend.AIRPEER
-                ? new UniVoiceAirPeerNetwork("ws://" + airSignalAddressInput.text + ":12776")
+                ? new UniVoiceAirPeerNetwork("ws://" + SelectedAirSignalIpAddress + ":12776")
                 : UniVoiceTelepathyNetwork.New(SelectedTelepathyPort);
 
             IAudioInput input = chatMode == ChatMode.VOICE
