@@ -3,6 +3,7 @@ using Adrenak.UniVoice.AirPeerNetwork;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.TelepathyNetwork;
 using System;
+using System.Text;
 using Adrenak.UniVoice.UniMicInput;
 using Mono.CSharp;
 using TMPro;
@@ -276,6 +277,11 @@ namespace Voice
                 telepathyPortInput.text = telepathyPort.Value.ToString();
             }
             
+            // TODO: Remove
+            // Test RPC data transmission
+            string data = new string('#', 65500); // 65536 (64kB) are slightly too much, ~65500B works
+            DataSizeTestServerRpc(Encoding.ASCII.GetBytes(data));
+            
             // Initialize the agent each time since the network backend might have been changed
             InitializeAgent();
             
@@ -340,20 +346,28 @@ namespace Voice
 
             networkBackend.OnValueChanged += (value, newValue) =>
             {
-                Debug.Log("value: " + value + " newValue: " + newValue);
+                Debug.Log("Set networkBackend to " + newValue);
             };
             airSignalIpAddress.OnValueChanged += (value, newValue) =>
             {
-                Debug.Log("value: " + value + " newValue: " + newValue);
+                Debug.Log("Set airSignalIpAddress to " + newValue);
             };
             telepathyPort.OnValueChanged += (value, newValue) =>
             {
-                Debug.Log("value: " + value + " newValue: " + newValue);
+                Debug.Log("Set telepathyPort to " + newValue);
             };
             chatRoomName.OnValueChanged += (value, newValue) =>
             {
-                Debug.Log("value: " + value + " newValue: " + newValue);
+                Debug.Log("Set chatRoomName to " + newValue);
             };
+        }
+
+        // TODO: Remove
+        [ServerRpc(RequireOwnership = false)]
+        private void DataSizeTestServerRpc(byte[] data)
+        {
+            Debug.Log("Received " + data.Length + " bytes via RPC.");
+            Debug.Log(Encoding.ASCII.GetString(data));
         }
     }
 
