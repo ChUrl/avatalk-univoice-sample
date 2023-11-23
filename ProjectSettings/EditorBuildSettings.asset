@@ -9,4 +9,6 @@ EditorBuildSettings:
     path: Assets/Scenes/UnivoicePoC.unity
     guid: 44680cb965051a1438b2af4f55b6b6db
   m_configObjects:
+    Unity.XR.Oculus.Settings: {fileID: 11400000, guid: cad7ee9b42ebf384390f874f7d05389c, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: f3564c1efb98b114dacbbb4e97e58149, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 36dc223ed9064074a80aa8e679c3aecf, type: 2}
