@@ -75,6 +75,7 @@ crashlytics-build.properties
 .idea
 Build_Windows
 Build_Android
+Build_Quest3
 Assets/Plugins
 Assets/Plugins
 Packages
