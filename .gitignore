@@ -76,6 +76,6 @@ crashlytics-build.properties
 Build_Windows
 Build_Android
 Build_Quest3
-Assets/Plugins
-Assets/Plugins
+Assets/Plugins/QFSW
+Assets/Plugins/QFSW.meta
 Packages
