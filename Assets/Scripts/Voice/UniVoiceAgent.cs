@@ -25,7 +25,6 @@ namespace Voice
             Radio
         }
 
-
         [Header("UI")]
         
         [SerializeField] private Button hostRoomButton;
@@ -52,11 +51,6 @@ namespace Voice
 
         private void InitializeAgent()
         {
-            // Don't know if this is required, Unity should request required permissions automatically....
-            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.Microphone);
-            UnityEngine.Android.Permission.RequestUserPermission("android.permission.INTERNET");
-            UnityEngine.Android.Permission.RequestUserPermission("android.permission.ACCESS_NETWORK_STATE");
-
             IChatroomNetwork network = UniVoiceTelepathyNetwork.New(TelepathyPort);
 
             IAudioInput input = chatMode == ChatMode.Voice
