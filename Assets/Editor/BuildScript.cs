@@ -66,7 +66,7 @@ namespace Editor
             proc.Start();
         }
 
-        [MenuItem("MyBuilds/2 - Android Build")]
+        [MenuItem("MyBuilds/2 - Android Build (Default Device)")]
         public static void BuildAndroid()
         {
             string path = GetPath("Android");
@@ -75,7 +75,7 @@ namespace Editor
             BuildPipeline.BuildPlayer(Levels, path + $"/{ArtifactName}.apk", BuildTarget.Android, BuildOptions.None);
         }
 
-        [MenuItem("MyBuilds/2 - Android Build + Run")]
+        [MenuItem("MyBuilds/2 - Android Build + Run (Default Device)")]
         public static void BuildRunAndroid()
         {
             string path = GetPath("Android");
